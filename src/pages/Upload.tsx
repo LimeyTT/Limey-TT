@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import BottomNavigation from "@/components/BottomNavigation";
 
 const Upload = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -52,7 +53,7 @@ const Upload = () => {
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       
       const { data, error } = await supabase.storage
-        .from('limey-db')
+        .from('limey-media')
         .upload(fileName, file);
 
       if (error) {
@@ -61,7 +62,7 @@ const Upload = () => {
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('limey-db')
+        .from('limey-media')
         .getPublicUrl(fileName);
 
       console.log("File uploaded successfully:", publicUrl);
@@ -236,6 +237,9 @@ const Upload = () => {
           </ul>
         </Card>
       </div>
+
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 };

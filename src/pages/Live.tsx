@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import BottomNavigation from "@/components/BottomNavigation";
 
 const Live = () => {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -138,6 +139,9 @@ const Live = () => {
           </div>
         )}
       </div>
+
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 };

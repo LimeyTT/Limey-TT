@@ -1,10 +1,15 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import BottomNavigation from "@/components/BottomNavigation";
 
 const Feed = () => {
   const [activeCategory, setActiveCategory] = useState("All");
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   
   const categories = [
     "All", "Soca", "Dancehall", "Carnival", "Comedy", "Dance", "Music", "Local News"
@@ -78,7 +83,8 @@ const Feed = () => {
           <h1 className="text-2xl font-bold text-primary">Limey</h1>
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm">Search</Button>
-            <Button variant="outline" size="sm">Upload</Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/upload')}>Upload</Button>
+            <Button variant="ghost" size="sm" onClick={signOut}>Logout</Button>
           </div>
         </div>
         
@@ -157,15 +163,7 @@ const Feed = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4">
-        <div className="flex justify-around items-center max-w-md mx-auto">
-          <Button variant="ghost" size="sm" onClick={() => console.log("Home clicked")}>Home</Button>
-          <Button variant="ghost" size="sm" onClick={() => console.log("Trending clicked")}>Trending</Button>
-          <Button variant="neon" size="sm" className="px-6" onClick={() => console.log("Plus clicked")}>+</Button>
-          <Button variant="ghost" size="sm" onClick={() => console.log("Live clicked")}>Live</Button>
-          <Button variant="ghost" size="sm" onClick={() => console.log("Profile clicked")}>Profile</Button>
-        </div>
-      </div>
+      <BottomNavigation />
     </div>
   );
 };

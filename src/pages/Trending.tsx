@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import BottomNavigation from "@/components/BottomNavigation";
 
 const Trending = () => {
   // Mock trending data with higher view counts
@@ -102,6 +103,9 @@ const Trending = () => {
           ))}
         </div>
       </div>
+
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 };

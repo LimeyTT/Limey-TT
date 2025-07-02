@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import BottomNavigation from "@/components/BottomNavigation";
 
 const Profile = () => {
   const { user, signOut } = useAuth();
@@ -203,6 +204,9 @@ const Profile = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Bottom Navigation */}
+      <BottomNavigation />
     </div>
   );
 };

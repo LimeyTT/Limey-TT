@@ -9,6 +9,10 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Feed from "./pages/Feed";
+import Trending from "./pages/Trending";
+import Live from "./pages/Live";
+import Profile from "./pages/Profile";
+import Upload from "./pages/Upload";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +26,10 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
+            <Route path="/trending" element={<ProtectedRoute><Trending /></ProtectedRoute>} />
+            <Route path="/live" element={<ProtectedRoute><Live /></ProtectedRoute>} />
+            <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/welcome" element={<Index />} />
