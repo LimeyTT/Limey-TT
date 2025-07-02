@@ -52,6 +52,9 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Limey specific colors
+				'trini-green': 'hsl(120 100% 50%)',
+				'trini-green-dark': 'hsl(120 100% 40%)',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -84,11 +87,21 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'glow': {
+					'0%': {
+						'box-shadow': '0 0 5px hsl(120 100% 50%), 0 0 10px hsl(120 100% 50%), 0 0 15px hsl(120 100% 50%)'
+					},
+					'100%': {
+						'box-shadow': '0 0 10px hsl(120 100% 50%), 0 0 20px hsl(120 100% 50%), 0 0 30px hsl(120 100% 50%)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-green': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+				'glow': 'glow 2s ease-in-out infinite alternate'
 			}
 		}
 	},

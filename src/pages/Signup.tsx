@@ -1,0 +1,95 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import LimeyLogo from "@/components/LimeyLogo";
+
+const Signup = () => {
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: ""
+  });
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSignup = (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: Implement Firebase auth
+    console.log("Signup attempt:", formData);
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md p-8 space-y-6">
+        <LimeyLogo />
+        
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-foreground">Join Limey</h2>
+          <p className="text-muted-foreground mt-2">Create your creator account</p>
+        </div>
+
+        <form onSubmit={handleSignup} className="space-y-4">
+          <div>
+            <Input
+              type="text"
+              placeholder="Username"
+              value={formData.username}
+              onChange={(e) => handleInputChange("username", e.target.value)}
+              required
+            />
+          </div>
+          
+          <div>
+            <Input
+              type="email"
+              placeholder="Email address"
+              value={formData.email}
+              onChange={(e) => handleInputChange("email", e.target.value)}
+              required
+            />
+          </div>
+          
+          <div>
+            <Input
+              type="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={(e) => handleInputChange("password", e.target.value)}
+              required
+            />
+          </div>
+          
+          <div>
+            <Input
+              type="password"
+              placeholder="Confirm Password"
+              value={formData.confirmPassword}
+              onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+              required
+            />
+          </div>
+
+          <Button type="submit" variant="neon" className="w-full">
+            Create Account
+          </Button>
+        </form>
+
+        <div className="text-center">
+          <div className="text-muted-foreground">
+            Already have an account?{" "}
+            <Link to="/login" className="text-primary hover:underline">
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+export default Signup;
