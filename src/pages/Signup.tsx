@@ -31,12 +31,21 @@ const Signup = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
+      console.error("Passwords do not match");
       return;
     }
 
     setLoading(true);
     
-    const { error } = await signUp(formData.email, formData.password, formData.username);
+    try {
+      const { error } = await signUp(formData.email, formData.password, formData.username);
+      
+      if (!error) {
+        console.log("Signup successful, should redirect");
+      }
+    } catch (err) {
+      console.error("Signup error:", err);
+    }
     
     setLoading(false);
   };

@@ -23,10 +23,17 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signIn(email, password);
-    
-    if (!error) {
-      navigate("/");
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (!error) {
+        console.log("Login successful, should redirect");
+        navigate("/");
+      } else {
+        console.error("Login error:", error);
+      }
+    } catch (err) {
+      console.error("Login exception:", err);
     }
     
     setLoading(false);

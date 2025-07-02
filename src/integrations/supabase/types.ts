@@ -71,7 +71,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      count_active_users: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_all_posts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: number
+          title: string
+          content: string
+        }[]
+      }
+      get_user_profile: {
+        Args: { user_id: number }
+        Returns: {
+          id: number
+          username: string
+          email: string
+        }[]
+      }
+      search_posts: {
+        Args: { keyword: string }
+        Returns: {
+          id: number
+          title: string
+          content: string
+        }[]
+      }
+      update_user_profile: {
+        Args: { user_id: number; new_username: string; new_email: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
