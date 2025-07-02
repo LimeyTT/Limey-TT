@@ -9,7 +9,63 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          follower_count: number | null
+          following_count: number | null
+          id: string
+          is_creator: boolean | null
+          is_verified: boolean | null
+          likes_received: number | null
+          location: string | null
+          trini_credits: number | null
+          updated_at: string
+          user_id: string
+          username: string
+          video_count: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          follower_count?: number | null
+          following_count?: number | null
+          id?: string
+          is_creator?: boolean | null
+          is_verified?: boolean | null
+          likes_received?: number | null
+          location?: string | null
+          trini_credits?: number | null
+          updated_at?: string
+          user_id: string
+          username: string
+          video_count?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          follower_count?: number | null
+          following_count?: number | null
+          id?: string
+          is_creator?: boolean | null
+          is_verified?: boolean | null
+          likes_received?: number | null
+          location?: string | null
+          trini_credits?: number | null
+          updated_at?: string
+          user_id?: string
+          username?: string
+          video_count?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

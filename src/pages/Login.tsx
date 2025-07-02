@@ -1,18 +1,35 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import LimeyLogo from "@/components/LimeyLogo";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn, user } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement Firebase auth
-    console.log("Login attempt:", { email, password });
+    setLoading(true);
+    
+    const { error } = await signIn(email, password);
+    
+    if (!error) {
+      navigate("/");
+    }
+    
+    setLoading(false);
   };
 
   return (
@@ -46,8 +63,8 @@ const Login = () => {
             />
           </div>
 
-          <Button type="submit" variant="neon" className="w-full">
-            Sign In
+          <Button type="submit" variant="neon" className="w-full" disabled={loading}>
+            {loading ? "Signing In..." : "Sign In"}
           </Button>
         </form>
 
