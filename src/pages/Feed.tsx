@@ -68,6 +68,8 @@ const Feed = () => {
     }
   ];
 
+  console.log("Feed component rendering");
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -87,7 +89,10 @@ const Feed = () => {
               key={category}
               variant={activeCategory === category ? "default" : "outline"}
               size="sm"
-              onClick={() => setActiveCategory(category)}
+              onClick={() => {
+                console.log("Category clicked:", category);
+                setActiveCategory(category);
+              }}
               className="whitespace-nowrap"
             >
               {category}
@@ -100,7 +105,14 @@ const Feed = () => {
       <div className="p-4">
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {mockVideos.map((video) => (
-            <Card key={video.id} className="video-card relative group cursor-pointer">
+            <Card 
+              key={video.id} 
+              className="video-card relative group cursor-pointer"
+              onClick={() => {
+                console.log("Video clicked:", video.title);
+                alert(`Playing: ${video.title}`);
+              }}
+            >
               <div className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden">
                 <img 
                   src={video.thumbnail} 
@@ -147,11 +159,11 @@ const Feed = () => {
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4">
         <div className="flex justify-around items-center max-w-md mx-auto">
-          <Button variant="ghost" size="sm">Home</Button>
-          <Button variant="ghost" size="sm">Trending</Button>
-          <Button variant="neon" size="sm" className="px-6">+</Button>
-          <Button variant="ghost" size="sm">Live</Button>
-          <Button variant="ghost" size="sm">Profile</Button>
+          <Button variant="ghost" size="sm" onClick={() => console.log("Home clicked")}>Home</Button>
+          <Button variant="ghost" size="sm" onClick={() => console.log("Trending clicked")}>Trending</Button>
+          <Button variant="neon" size="sm" className="px-6" onClick={() => console.log("Plus clicked")}>+</Button>
+          <Button variant="ghost" size="sm" onClick={() => console.log("Live clicked")}>Live</Button>
+          <Button variant="ghost" size="sm" onClick={() => console.log("Profile clicked")}>Profile</Button>
         </div>
       </div>
     </div>
