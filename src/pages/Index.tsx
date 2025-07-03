@@ -32,11 +32,6 @@ const Index = () => {
             </Link>
           </div>
           
-          <div className="mt-6">
-            <Link to="/" className="text-primary hover:underline text-sm">
-              Continue as Guest
-            </Link>
-          </div>
         </div>
       </div>
     </div>
