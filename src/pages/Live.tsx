@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import BottomNavigation from "@/components/BottomNavigation";
-import LiveStreamDialog from "@/components/LiveStreamDialog";
 
 const Live = () => {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -56,7 +55,7 @@ const Live = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">🔴 Live</h1>
           <div className="flex items-center space-x-2">
-            <LiveStreamDialog />
+            <Button variant="neon" size="sm">Go Live</Button>
           </div>
         </div>
         

@@ -1,51 +1,79 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import BottomNavigation from "@/components/BottomNavigation";
-import VideoPlayer from "@/components/VideoPlayer";
-import { useVideoData } from "@/hooks/useVideoData";
-import { Search, Upload, LogOut } from "lucide-react";
 
 const Feed = () => {
   const [activeCategory, setActiveCategory] = useState("All");
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { videos, loading, fetchVideos } = useVideoData();
   
   const categories = [
     "All", "Soca", "Dancehall", "Carnival", "Comedy", "Dance", "Music", "Local News"
   ];
 
-  useEffect(() => {
-    fetchVideos(activeCategory);
-  }, [activeCategory, fetchVideos]);
-
-  const handleVideoEnd = () => {
-    if (currentVideoIndex < videos.length - 1) {
-      setCurrentVideoIndex(currentVideoIndex + 1);
+  // Mock video data
+  const mockVideos = [
+    {
+      id: 1,
+      creator: "SocaKing_TT",
+      title: "Carnival Prep 2024 🎭",
+      views: "15.2K",
+      duration: "0:45",
+      thumbnail: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop",
+      isLive: false
+    },
+    {
+      id: 2,
+      creator: "TriniDancer",
+      title: "Best Wining Tutorial",
+      views: "23.1K",
+      duration: "1:20",
+      thumbnail: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=600&fit=crop",
+      isLive: false
+    },
+    {
+      id: 3,
+      creator: "CarnivalQueen",
+      title: "LIVE: Costume Reveal! 🔥",
+      views: "1.8K",
+      duration: "",
+      thumbnail: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=600&fit=crop",
+      isLive: true
+    },
+    {
+      id: 4,
+      creator: "LocalComedy",
+      title: "Trini Life Be Like... 😂",
+      views: "8.9K",
+      duration: "0:30",
+      thumbnail: "https://images.unsplash.com/photo-1517849845537-4d257902454a?w=400&h=600&fit=crop",
+      isLive: false
+    },
+    {
+      id: 5,
+      creator: "SteelPanMaster",
+      title: "Sweet Pan Vibes",
+      views: "12.5K",
+      duration: "2:15",
+      thumbnail: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop",
+      isLive: false
+    },
+    {
+      id: 6,
+      creator: "TriniTech",
+      title: "Local Business Tips",
+      views: "5.3K",
+      duration: "1:45",
+      thumbnail: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=600&fit=crop",
+      isLive: false
     }
-  };
+  ];
 
-  const handleSwipe = (direction: 'up' | 'down') => {
-    if (direction === 'up' && currentVideoIndex < videos.length - 1) {
-      setCurrentVideoIndex(currentVideoIndex + 1);
-    } else if (direction === 'down' && currentVideoIndex > 0) {
-      setCurrentVideoIndex(currentVideoIndex - 1);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  console.log("Feed component rendering");
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,27 +82,9 @@ const Feed = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">Limey</h1>
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowSearch(!showSearch)}
-            >
-              <Search className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => navigate('/upload')}
-            >
-              <Upload className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={signOut}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <Button variant="ghost" size="sm">Search</Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/upload')}>Upload</Button>
+            <Button variant="ghost" size="sm" onClick={signOut}>Logout</Button>
           </div>
         </div>
         
@@ -85,7 +95,10 @@ const Feed = () => {
               key={category}
               variant={activeCategory === category ? "default" : "outline"}
               size="sm"
-              onClick={() => setActiveCategory(category)}
+              onClick={() => {
+                console.log("Category clicked:", category);
+                setActiveCategory(category);
+              }}
               className="whitespace-nowrap"
             >
               {category}
@@ -94,37 +107,60 @@ const Feed = () => {
         </div>
       </div>
 
-      {/* Video Feed - Full Screen Swipe Interface */}
-      {videos.length > 0 ? (
-        <div className="relative h-screen">
-          <VideoPlayer
-            video={videos[currentVideoIndex]}
-            isActive={true}
-            onVideoEnd={handleVideoEnd}
-          />
-          
-          {/* Swipe handlers */}
-          <div 
-            className="absolute top-0 left-0 w-full h-1/2 z-10"
-            onClick={() => handleSwipe('down')}
-          />
-          <div 
-            className="absolute bottom-0 left-0 w-full h-1/2 z-10"
-            onClick={() => handleSwipe('up')}
-          />
+      {/* Video Grid */}
+      <div className="p-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {mockVideos.map((video) => (
+            <Card 
+              key={video.id} 
+              className="video-card relative group cursor-pointer"
+              onClick={() => {
+                console.log("Video clicked:", video.title);
+                alert(`Playing: ${video.title}`);
+              }}
+            >
+              <div className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden">
+                <img 
+                  src={video.thumbnail} 
+                  alt={video.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                
+                {/* Video Duration or LIVE badge */}
+                <div className="absolute bottom-2 right-2">
+                  {video.isLive ? (
+                    <Badge className="bg-red-600 text-white animate-pulse">
+                      LIVE
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="bg-black/70 text-white">
+                      {video.duration}
+                    </Badge>
+                  )}
+                </div>
+                
+                {/* Play button overlay */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    <span className="text-primary-foreground text-xl">▶</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Video Info */}
+              <div className="p-3">
+                <h3 className="font-semibold text-foreground text-sm line-clamp-2 mb-1">
+                  {video.title}
+                </h3>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="creator-badge">{video.creator}</span>
+                  <span>{video.views} views</span>
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
-      ) : (
-        <div className="p-4 text-center">
-          <p className="text-muted-foreground">No videos available in this category</p>
-          <Button 
-            variant="neon" 
-            className="mt-4"
-            onClick={() => navigate('/upload')}
-          >
-            Upload First Video
-          </Button>
-        </div>
-      )}
+      </div>
 
       {/* Bottom Navigation */}
       <BottomNavigation />
