@@ -186,28 +186,45 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
   };
 
   // Like/unlike logic (revert to previous working version)
+  // Like/unlike logic with immediate UI feedback and like count update
   const handleLike = async () => {
     if (!user) return;
+    const prevLiked = isLiked;
+    setIsLiked(!isLiked);
+    let newCount = video.like_count || 0;
+    if (!isLiked) {
+      video.like_count = newCount + 1;
+    } else {
+      video.like_count = Math.max(newCount - 1, 0);
+    }
     try {
-      if (isLiked) {
+      if (prevLiked) {
         // Unlike
-        await supabase
+        const { error } = await supabase
           .from('video_likes')
           .delete()
           .eq('video_id', video.id)
           .eq('user_id', user.id);
-        setIsLiked(false);
+        if (error) {
+          setIsLiked(prevLiked);
+          video.like_count = newCount;
+        }
       } else {
         // Like
-        await supabase
+        const { error } = await supabase
           .from('video_likes')
           .insert({
             video_id: video.id,
             user_id: user.id
           });
-        setIsLiked(true);
+        if (error) {
+          setIsLiked(prevLiked);
+          video.like_count = newCount;
+        }
       }
     } catch (error) {
+      setIsLiked(prevLiked);
+      video.like_count = newCount;
       toast({
         title: "Error",
         description: "Failed to update like status",
