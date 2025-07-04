@@ -10,7 +10,7 @@ const Index = () => {
         
         <div className="space-y-4">
           <h2 className="text-2xl text-foreground">
-            Trinidad & Tobago's Home for Local Creators
+            Trinbago's Home for Local Creators
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
             Share your moments, discover local talent, and connect with the Caribbean community.
@@ -31,12 +31,16 @@ const Index = () => {
               </Button>
             </Link>
           </div>
-          
-          <div className="mt-6">
-            <Link to="/" className="text-primary hover:underline text-sm">
-              Continue as Guest
-            </Link>
-          </div>
+          <div className="text-sm text-muted-foreground">
+            By signing up, you agree to our{" "}
+            <Link to="/terms" className="text-primary hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>.
+            </div>
         </div>
       </div>
     </div>
