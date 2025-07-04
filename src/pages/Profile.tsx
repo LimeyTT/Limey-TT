@@ -6,17 +6,57 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNavigation from "@/components/BottomNavigation";
+import { Settings as SettingsIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(null);
+  const [isVideoPopupOpen, setIsVideoPopupOpen] = useState(false);
+  const [startY, setStartY] = useState(0);
+
+  // User videos state
+  const [userVideos, setUserVideos] = useState<any[]>([]);
+
 
   useEffect(() => {
     if (user) {
       fetchProfile();
+      fetchUserVideos();
     }
   }, [user]);
+
+  // Fetch user videos from Supabase Storage (limey-media/<user.id>)
+  const fetchUserVideos = async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase.storage.from('limey-media').list(user.id, { limit: 100 });
+      if (error) {
+        console.error('Error fetching user videos:', error);
+        setUserVideos([]);
+        return;
+      }
+      const videos = data
+        .filter((file) => file.name.match(/\.(mp4|mov|webm|ogg)$/i))
+        .map((file) => {
+          const { publicUrl } = supabase.storage.from('limey-media').getPublicUrl(`${user.id}/${file.name}`).data;
+          return {
+            id: file.id || file.name,
+            title: file.name,
+            video_url: publicUrl,
+            thumbnail_url: '',
+            created_at: file.created_at || '',
+          };
+        });
+      setUserVideos(videos);
+    } catch (err) {
+      console.error('User videos fetch error:', err);
+      setUserVideos([]);
+    }
+  };
 
   const fetchProfile = async () => {
     try {
@@ -38,25 +78,40 @@ const Profile = () => {
     }
   };
 
-  // Mock user videos
-  const userVideos = [
-    {
-      id: 1,
-      title: "My First Limey Video! 🎉",
-      views: "1.2K",
-      duration: "0:30",
-      thumbnail: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop",
-      likes: "89"
-    },
-    {
-      id: 2,
-      title: "Carnival Prep 2024",
-      views: "856",
-      duration: "1:15",
-      thumbnail: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=600&fit=crop",
-      likes: "67"
+  // Handle video selection
+  const handleVideoClick = (index: number) => {
+    setSelectedVideoIndex(index);
+    setIsVideoPopupOpen(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  // Handle popup close
+  const handleCloseVideo = () => {
+    setIsVideoPopupOpen(false);
+    setSelectedVideoIndex(null);
+    document.body.style.overflow = 'auto';
+  };
+
+  // Handle next video
+  const handleNextVideo = () => {
+    if (selectedVideoIndex === null || !userVideos) return;
+    const nextIndex = selectedVideoIndex + 1;
+    if (nextIndex < userVideos.length) {
+      setSelectedVideoIndex(nextIndex);
     }
-  ];
+  };
+
+  // Handle previous video
+  const handlePreviousVideo = () => {
+    if (selectedVideoIndex === null || !userVideos) return;
+    const prevIndex = selectedVideoIndex - 1;
+    if (prevIndex >= 0) {
+      setSelectedVideoIndex(prevIndex);
+    } else {
+      // Refresh the page when swiping down on first video
+      window.location.reload();
+    }
+  };
 
   if (loading) {
     return (
@@ -73,7 +128,13 @@ const Profile = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">Profile</h1>
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm">Settings</Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/settings')}
+            >
+              <SettingsIcon className="w-5 h-5" />
+            </Button>
             <Button variant="outline" size="sm" onClick={signOut}>Logout</Button>
           </div>
         </div>
@@ -156,27 +217,25 @@ const Profile = () => {
           
           <TabsContent value="videos" className="mt-4">
             <div className="grid grid-cols-3 gap-2">
-              {userVideos.map((video) => (
-                <Card 
-                  key={video.id} 
+              {userVideos.map((video, index) => (
+                <Card
+                  key={video.id}
                   className="relative aspect-[9/16] cursor-pointer group"
-                  onClick={() => {
-                    console.log("User video clicked:", video.title);
-                  }}
+                  onClick={() => handleVideoClick(index)}
                 >
-                  <img 
-                    src={video.thumbnail} 
+                  <img
+                    src={video.thumbnail_url || video.thumbnail || "/placeholder.svg"}
                     alt={video.title}
                     className="w-full h-full object-cover rounded-lg group-hover:opacity-80 transition-opacity"
                   />
                   <div className="absolute bottom-2 right-2">
                     <Badge variant="secondary" className="bg-black/70 text-white text-xs">
-                      {video.duration}
+                      {video.duration || "--:--"}
                     </Badge>
                   </div>
                   <div className="absolute bottom-2 left-2">
                     <div className="text-white text-xs">
-                      👁️ {video.views}
+                      👁️ {video.view_count || 0}
                     </div>
                   </div>
                 </Card>
@@ -204,6 +263,66 @@ const Profile = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Video Popup */}
+      {isVideoPopupOpen && selectedVideoIndex !== null && (
+        <div 
+          className="fixed inset-0 z-50 bg-black touch-none"
+          onTouchStart={(e) => {
+            const touch = e.touches[0];
+            setStartY(touch.clientY);
+          }}
+          onTouchMove={(e) => {
+            const touch = e.touches[0];
+            const deltaY = touch.clientY - startY;
+            
+            if (Math.abs(deltaY) > 100) {
+              if (deltaY > 0 && selectedVideoIndex === 0) {
+                handleCloseVideo();
+                window.location.reload();
+              } else if (deltaY > 0) {
+                handlePreviousVideo();
+              } else {
+                handleNextVideo();
+              }
+              setStartY(touch.clientY);
+            }
+          }}
+        >
+          <div className="relative h-full w-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 z-50 text-white"
+              onClick={handleCloseVideo}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </Button>
+            
+            <video
+              key={userVideos[selectedVideoIndex]?.id}
+              src={userVideos[selectedVideoIndex]?.video_url}
+              poster={userVideos[selectedVideoIndex]?.thumbnail_url || userVideos[selectedVideoIndex]?.thumbnail || "/placeholder.svg"}
+              className="h-full w-full object-cover"
+              autoPlay
+              playsInline
+              loop
+              controls
+            />
+            
+            <div className="absolute bottom-20 left-4 right-4 text-white">
+              <h3 className="text-lg font-bold mb-2">{userVideos[selectedVideoIndex].title}</h3>
+              <div className="flex items-center space-x-2">
+                <span>{userVideos[selectedVideoIndex].views} views</span>
+                <span>•</span>
+                <span>{userVideos[selectedVideoIndex].likes} likes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       <BottomNavigation />
