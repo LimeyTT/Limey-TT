@@ -1,13 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Settings } from "lucide-react";
 import BottomNavigation from "@/components/BottomNavigation";
+import VideoPlayer from "@/components/VideoPlayer";
 
 const Feed = () => {
   const [activeCategory, setActiveCategory] = useState("All");
+  const [videos, setVideos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedVideo, setSelectedVideo] = useState<any>(null);
   const navigate = useNavigate();
   const { signOut } = useAuth();
   
@@ -15,65 +21,58 @@ const Feed = () => {
     "All", "Soca", "Dancehall", "Carnival", "Comedy", "Dance", "Music", "Local News"
   ];
 
-  // Mock video data
-  const mockVideos = [
-    {
-      id: 1,
-      creator: "SocaKing_TT",
-      title: "Carnival Prep 2024 🎭",
-      views: "15.2K",
-      duration: "0:45",
-      thumbnail: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop",
-      isLive: false
-    },
-    {
-      id: 2,
-      creator: "TriniDancer",
-      title: "Best Wining Tutorial",
-      views: "23.1K",
-      duration: "1:20",
-      thumbnail: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=600&fit=crop",
-      isLive: false
-    },
-    {
-      id: 3,
-      creator: "CarnivalQueen",
-      title: "LIVE: Costume Reveal! 🔥",
-      views: "1.8K",
-      duration: "",
-      thumbnail: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&h=600&fit=crop",
-      isLive: true
-    },
-    {
-      id: 4,
-      creator: "LocalComedy",
-      title: "Trini Life Be Like... 😂",
-      views: "8.9K",
-      duration: "0:30",
-      thumbnail: "https://images.unsplash.com/photo-1517849845537-4d257902454a?w=400&h=600&fit=crop",
-      isLive: false
-    },
-    {
-      id: 5,
-      creator: "SteelPanMaster",
-      title: "Sweet Pan Vibes",
-      views: "12.5K",
-      duration: "2:15",
-      thumbnail: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop",
-      isLive: false
-    },
-    {
-      id: 6,
-      creator: "TriniTech",
-      title: "Local Business Tips",
-      views: "5.3K",
-      duration: "1:45",
-      thumbnail: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=600&fit=crop",
-      isLive: false
-    }
-  ];
+  useEffect(() => {
+    fetchVideos();
+  }, [activeCategory]);
 
-  console.log("Feed component rendering");
+  const fetchVideos = async () => {
+    try {
+      setLoading(true);
+      
+      let query = supabase
+        .from('videos')
+        .select(`
+          *,
+          profiles!videos_user_id_fkey (
+            username,
+            avatar_url
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      // Filter by category if not "All"
+      if (activeCategory !== "All") {
+        query = query.eq('category', activeCategory);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching videos:', error);
+        return;
+      }
+
+      setVideos(data || []);
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const formatViews = (count?: number) => {
+    if (!count) return "0";
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,6 +83,13 @@ const Feed = () => {
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm">Search</Button>
             <Button variant="outline" size="sm" onClick={() => navigate('/upload')}>Upload</Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/settings')}
+            >
+              <Settings size={16} />
+            </Button>
             <Button variant="ghost" size="sm" onClick={signOut}>Logout</Button>
           </div>
         </div>
@@ -95,10 +101,7 @@ const Feed = () => {
               key={category}
               variant={activeCategory === category ? "default" : "outline"}
               size="sm"
-              onClick={() => {
-                console.log("Category clicked:", category);
-                setActiveCategory(category);
-              }}
+              onClick={() => setActiveCategory(category)}
               className="whitespace-nowrap"
             >
               {category}
@@ -109,58 +112,67 @@ const Feed = () => {
 
       {/* Video Grid */}
       <div className="p-4">
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {mockVideos.map((video) => (
-            <Card 
-              key={video.id} 
-              className="video-card relative group cursor-pointer"
-              onClick={() => {
-                console.log("Video clicked:", video.title);
-                alert(`Playing: ${video.title}`);
-              }}
-            >
-              <div className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden">
-                <img 
-                  src={video.thumbnail} 
-                  alt={video.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                
-                {/* Video Duration or LIVE badge */}
-                <div className="absolute bottom-2 right-2">
-                  {video.isLive ? (
-                    <Badge className="bg-red-600 text-white animate-pulse">
-                      LIVE
-                    </Badge>
-                  ) : (
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : videos.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No videos found for this category</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {videos.map((video) => (
+              <Card 
+                key={video.id} 
+                className="video-card relative group cursor-pointer"
+                onClick={() => setSelectedVideo(video)}
+              >
+                <div className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden">
+                  <img 
+                    src={video.thumbnail_url || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop"}
+                    alt={video.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  
+                  {/* Video Duration */}
+                  <div className="absolute bottom-2 right-2">
                     <Badge variant="secondary" className="bg-black/70 text-white">
-                      {video.duration}
+                      {formatDuration(video.duration)}
                     </Badge>
-                  )}
-                </div>
-                
-                {/* Play button overlay */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-                    <span className="text-primary-foreground text-xl">▶</span>
+                  </div>
+                  
+                  {/* Play button overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                      <span className="text-primary-foreground text-xl">▶</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Video Info */}
-              <div className="p-3">
-                <h3 className="font-semibold text-foreground text-sm line-clamp-2 mb-1">
-                  {video.title}
-                </h3>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="creator-badge">{video.creator}</span>
-                  <span>{video.views} views</span>
+                
+                {/* Video Info */}
+                <div className="p-3">
+                  <h3 className="font-semibold text-foreground text-sm line-clamp-2 mb-1">
+                    {video.title}
+                  </h3>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="creator-badge">@{video.profiles?.username || 'unknown'}</span>
+                    <span>{formatViews(video.view_count)} views</span>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Video Player Modal */}
+      {selectedVideo && (
+        <VideoPlayer 
+          video={selectedVideo} 
+          onClose={() => setSelectedVideo(null)} 
+        />
+      )}
 
       {/* Bottom Navigation */}
       <BottomNavigation />

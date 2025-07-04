@@ -527,6 +527,10 @@ export type Database = {
         Args: { video_id_input: string }
         Returns: undefined
       }
+      generate_video_search_vector: {
+        Args: { p_title: string; p_description: string; p_tags: string[] }
+        Returns: unknown
+      }
       get_all_posts: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -535,12 +539,70 @@ export type Database = {
           content: string
         }[]
       }
+      get_trending_videos: {
+        Args:
+          | { limit_count?: number }
+          | { p_limit?: number; p_timeframe?: string }
+        Returns: {
+          video_id: string
+          title: string
+          thumbnail_url: string
+          username: string
+          user_avatar: string
+          view_count: number
+          like_count: number
+          comment_count: number
+          created_at: string
+          trending_score: number
+        }[]
+      }
+      get_user_feed: {
+        Args: {
+          p_user_id: string
+          p_limit?: number
+          p_offset?: number
+          p_include_following_only?: boolean
+        }
+        Returns: {
+          video_id: string
+          title: string
+          thumbnail_url: string
+          video_url: string
+          duration: number
+          view_count: number
+          like_count: number
+          comment_count: number
+          creator_id: string
+          username: string
+          avatar_url: string
+          created_at: string
+          is_following: boolean
+          has_liked: boolean
+          feed_score: number
+        }[]
+      }
       get_user_profile: {
         Args: { user_id: number }
         Returns: {
           id: number
           username: string
           email: string
+        }[]
+      }
+      get_video_stats: {
+        Args: { p_video_id: string }
+        Returns: {
+          video_id: string
+          title: string
+          view_count: number
+          like_count: number
+          comment_count: number
+          share_count: number
+          engagement_rate: number
+          creator_name: string
+          creator_id: string
+          created_at: string
+          recent_comments: Json
         }[]
       }
       increment_comment_count: {
@@ -562,6 +624,48 @@ export type Database = {
           title: string
           content: string
         }[]
+      }
+      search_videos: {
+        Args: {
+          p_query: string
+          p_limit?: number
+          p_offset?: number
+          p_category?: string
+          p_min_duration?: number
+          p_max_duration?: number
+        }
+        Returns: {
+          video_id: string
+          title: string
+          description: string
+          thumbnail_url: string
+          duration: number
+          view_count: number
+          like_count: number
+          username: string
+          user_avatar: string
+          created_at: string
+          search_rank: number
+        }[]
+      }
+      update_profile: {
+        Args:
+          | {
+              p_user_id: string
+              p_username?: string
+              p_display_name?: string
+              p_bio?: string
+              p_avatar_url?: string
+              p_location?: string
+            }
+          | {
+              user_id_input: string
+              username_input: string
+              display_name_input: string
+              bio_input: string
+              avatar_url_input: string
+            }
+        Returns: undefined
       }
       update_user_profile: {
         Args: { user_id: number; new_username: string; new_email: string }
