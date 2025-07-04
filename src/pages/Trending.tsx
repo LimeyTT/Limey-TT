@@ -5,9 +5,49 @@ import { Badge } from "@/components/ui/badge";
 import BottomNavigation from "@/components/BottomNavigation";
 
 const Trending = () => {
-  // TODO: Replace with real API call to fetch trending videos from backend
-  // Each video should have a thumbnail_url (first frame), and optionally a cover image
-  const trendingVideos = [];
+  // Mock trending data with higher view counts
+  const trendingVideos = [
+    {
+      id: 1,
+      creator: "CarnivalKing_2024",
+      title: "Road March Champion! 🏆",
+      views: "2.1M",
+      duration: "1:30",
+      thumbnail: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop",
+      isLive: false,
+      trending: "#1"
+    },
+    {
+      id: 2,
+      creator: "SocaVibes",
+      title: "VIRAL Dance Challenge 🔥",
+      views: "1.8M",
+      duration: "0:15",
+      thumbnail: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=600&fit=crop",
+      isLive: false,
+      trending: "#2"
+    },
+    {
+      id: 3,
+      creator: "TriniComedy",
+      title: "When Your Mom Calls... 😂",
+      views: "1.2M",
+      duration: "0:45",
+      thumbnail: "https://images.unsplash.com/photo-1517849845537-4d257902454a?w=400&h=600&fit=crop",
+      isLive: false,
+      trending: "#3"
+    },
+    {
+      id: 4,
+      creator: "LocalFoodie",
+      title: "Making Doubles at 3AM",
+      views: "890K",
+      duration: "2:00",
+      thumbnail: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=600&fit=crop",
+      isLive: false,
+      trending: "#4"
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -41,7 +81,7 @@ const Trending = () => {
               
               <div className="relative w-16 h-20 rounded-lg overflow-hidden">
                 <img 
-                  src={video.thumbnail_url || video.cover_url || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop"} 
+                  src={video.thumbnail} 
                   alt={video.title}
                   className="w-full h-full object-cover"
                 />
