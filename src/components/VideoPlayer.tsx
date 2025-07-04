@@ -185,45 +185,36 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
     }
   };
 
-  async function handleLike(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): Promise<void> {
-    event.stopPropagation();
-    if (!user) {
-      toast({
-        title: "Login required",
-        description: "Please log in to like videos.",
-        variant: "destructive",
-      });
-      return;
-    }
-    // Optimistic UI update
-    setIsLiked((prev) => !prev);
-
-    // Update like in database
-    if (!isLiked) {
-      // Add like
-      const { error } = await supabase.from("video_likes").insert({
-        user_id: user.id,
-        video_id: video.id,
-      });
-      if (!error) {
-        // Optionally update like_count locally
-        video.like_count = (video.like_count || 0) + 1;
-      } else {
+  // Like/unlike logic (revert to previous working version)
+  const handleLike = async () => {
+    if (!user) return;
+    try {
+      if (isLiked) {
+        // Unlike
+        await supabase
+          .from('video_likes')
+          .delete()
+          .eq('video_id', video.id)
+          .eq('user_id', user.id);
         setIsLiked(false);
-      }
-    } else {
-      // Remove like
-      const { error } = await supabase.from("video_likes")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("video_id", video.id);
-      if (!error) {
-        video.like_count = Math.max((video.like_count || 1) - 1, 0);
       } else {
+        // Like
+        await supabase
+          .from('video_likes')
+          .insert({
+            video_id: video.id,
+            user_id: user.id
+          });
         setIsLiked(true);
       }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update like status",
+        variant: "destructive"
+      });
     }
-  }
+  };
 
   // Restore togglePlay and toggleMute
   const togglePlay = () => {
