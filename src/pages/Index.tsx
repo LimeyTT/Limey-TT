@@ -10,7 +10,7 @@ const Index = () => {
         
         <div className="space-y-4">
           <h2 className="text-2xl text-foreground">
-            Trinbago's Home for Local Creators
+            Trinbago's Home for Creators
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
             Share your moments, discover local talent, and connect with the Caribbean community.
