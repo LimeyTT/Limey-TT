@@ -1,3 +1,7 @@
+  // Helper type guard for profiles
+  function hasProfile(obj: any): obj is { username: string } {
+    return obj && typeof obj === "object" && typeof obj.username === "string";
+  }
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Volume2, VolumeX, Heart, MessageCircle, Share, Play } from "lucide-react";
@@ -32,6 +36,7 @@ interface VideoPlayerProps {
   onPrevious: () => void;
 }
 
+// ...existing code...
 const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious }: VideoPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -41,81 +46,93 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
-  useEffect(() => {
-    // Auto-play when video changes
-    if (videoRef.current) {
-      videoRef.current.play();
-      setIsPlaying(true);
-    }
-  }, [video.id]);
+  // Comments state and logic moved inside component
+  type CommentRow = {
+    id: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
+    user_id: string;
+    video_id: string;
+    profiles?: { username: string; avatar_url?: string } | null;
+  };
+  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [commentInput, setCommentInput] = useState("");
+  const [loadingComment, setLoadingComment] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [showMenuId, setShowMenuId] = useState<string | null>(null);
 
+  // Fetch comments
   useEffect(() => {
-    // Check if user has liked this video
-    const checkLikeStatus = async () => {
-      if (user) {
-        const { data } = await supabase
-          .from('video_likes')
-          .select('id')
-          .eq('video_id', video.id)
-          .eq('user_id', user.id)
-          .single();
-        
-        setIsLiked(!!data);
+    const fetchComments = async () => {
+      const { data, error } = await supabase
+        .from("comments")
+        .select("*, profiles(username, avatar_url)")
+        .eq("video_id", video.id)
+        .order("created_at", { ascending: false });
+      if (!error && data) {
+        // Ensure profiles is either a valid object or null
+        const fixedComments = (data as any[]).map((c) => ({
+          ...c,
+          profiles: hasProfile(c.profiles) ? c.profiles : null,
+        })) as CommentRow[];
+        setComments(fixedComments);
       }
     };
+    fetchComments();
+  }, [video.id]);
 
-    checkLikeStatus();
-  }, [video.id, user]);
+  // Add comment
+  const handleAddComment = async () => {
+    if (!user || !commentInput.trim()) return;
+    setLoadingComment(true);
+    const { error, data } = await supabase.from("comments").insert({
+      content: commentInput,
+      user_id: user.id,
+      video_id: video.id,
+    }).select("*, profiles(username, avatar_url)").single();
+    if (!error && data) {
+      const fixedData = {
+        ...data,
+        profiles: hasProfile(data.profiles) ? data.profiles : null,
+      } as CommentRow;
+      setComments((prev) => [fixedData, ...prev]);
+      setCommentInput("");
+    }
+    setLoadingComment(false);
+  };
 
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
+  // Edit comment
+  const handleSaveEdit = async (id: string) => {
+    if (!editValue.trim()) return;
+    const { error, data } = await supabase.from("comments").update({
+      content: editValue,
+      updated_at: new Date().toISOString(),
+    }).eq("id", id).select("*, profiles(username, avatar_url)").single();
+    if (!error && data) {
+      const fixedData = {
+        ...data,
+        profiles: hasProfile(data.profiles) ? data.profiles : null,
+      } as CommentRow;
+      setComments((prev) => prev.map((c) => c.id === id ? fixedData : c));
+      setEditingId(null);
+      setEditValue("");
+      setShowMenuId(null);
     }
   };
 
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
+  // Delete comment
+  const handleDeleteComment = async (id: string) => {
+    const { error } = await supabase.from("comments").delete().eq("id", id);
+    if (!error) {
+      setComments((prev) => prev.filter((c) => c.id !== id));
+      setEditingId(null);
+      setEditValue("");
+      setShowMenuId(null);
     }
   };
-
-  const handleLike = async () => {
-    if (!user) return;
-
-    try {
-      if (isLiked) {
-        // Unlike
-        await supabase
-          .from('video_likes')
-          .delete()
-          .eq('video_id', video.id)
-          .eq('user_id', user.id);
-        setIsLiked(false);
-      } else {
-        // Like
-        await supabase
-          .from('video_likes')
-          .insert({
-            video_id: video.id,
-            user_id: user.id
-          });
-        setIsLiked(true);
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update like status",
-        variant: "destructive"
-      });
-    }
-  };
-
+  // Restore handleShare function
   const handleShare = async () => {
     try {
       await navigator.share({
@@ -132,6 +149,21 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
       });
     }
   };
+
+  // Cancel edit
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditValue("");
+    setShowMenuId(null);
+  };
+
+  useEffect(() => {
+    // Auto-play when video changes
+    if (videoRef.current) {
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+  }, [video.id]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setStartY(e.touches[0].clientY);
@@ -153,6 +185,64 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
     }
   };
 
+  async function handleLike(event: React.MouseEvent<HTMLButtonElement, MouseEvent>): Promise<void> {
+    event.stopPropagation();
+    if (!user) {
+      toast({
+        title: "Login required",
+        description: "Please log in to like videos.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Optimistic UI update
+    setIsLiked((prev) => !prev);
+
+    // Update like in database
+    if (!isLiked) {
+      // Add like
+      const { error } = await supabase.from("video_likes").insert({
+        user_id: user.id,
+        video_id: video.id,
+      });
+      if (!error) {
+        // Optionally update like_count locally
+        video.like_count = (video.like_count || 0) + 1;
+      } else {
+        setIsLiked(false);
+      }
+    } else {
+      // Remove like
+      const { error } = await supabase.from("video_likes")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("video_id", video.id);
+      if (!error) {
+        video.like_count = Math.max((video.like_count || 1) - 1, 0);
+      } else {
+        setIsLiked(true);
+      }
+    }
+  }
+
+  // Restore togglePlay and toggleMute
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
   return (
     <div 
       ref={containerRef}
