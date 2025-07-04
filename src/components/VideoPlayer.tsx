@@ -41,27 +41,10 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const { user } = useAuth();
-  // Check if user has liked this video on mount or when video/user changes
-  useEffect(() => {
-    const checkLikeStatus = async () => {
-      if (user && video.id) {
-        const { data } = await supabase
-          .from('video_likes')
-          .select('id')
-          .eq('video_id', video.id)
-          .eq('user_id', user.id)
-          .single();
-        setIsLiked(!!data);
-      } else {
-        setIsLiked(false);
-      }
-    };
-    checkLikeStatus();
-  }, [user, video.id]);
   const [startY, setStartY] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   // Comments state and logic moved inside component
   type CommentRow = {
@@ -203,45 +186,28 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
   };
 
   // Like/unlike logic (revert to previous working version)
-  // Like/unlike logic with immediate UI feedback and like count update
   const handleLike = async () => {
     if (!user) return;
-    const prevLiked = isLiked;
-    setIsLiked(!isLiked);
-    let newCount = video.like_count || 0;
-    if (!isLiked) {
-      video.like_count = newCount + 1;
-    } else {
-      video.like_count = Math.max(newCount - 1, 0);
-    }
     try {
-      if (prevLiked) {
+      if (isLiked) {
         // Unlike
-        const { error } = await supabase
+        await supabase
           .from('video_likes')
           .delete()
           .eq('video_id', video.id)
           .eq('user_id', user.id);
-        if (error) {
-          setIsLiked(prevLiked);
-          video.like_count = newCount;
-        }
+        setIsLiked(false);
       } else {
         // Like
-        const { error } = await supabase
+        await supabase
           .from('video_likes')
           .insert({
             video_id: video.id,
             user_id: user.id
           });
-        if (error) {
-          setIsLiked(prevLiked);
-          video.like_count = newCount;
-        }
+        setIsLiked(true);
       }
     } catch (error) {
-      setIsLiked(prevLiked);
-      video.like_count = newCount;
       toast({
         title: "Error",
         description: "Failed to update like status",
