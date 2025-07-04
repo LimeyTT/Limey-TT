@@ -41,10 +41,27 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const { user } = useAuth();
+  // Check if user has liked this video on mount or when video/user changes
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      if (user && video.id) {
+        const { data } = await supabase
+          .from('video_likes')
+          .select('id')
+          .eq('video_id', video.id)
+          .eq('user_id', user.id)
+          .single();
+        setIsLiked(!!data);
+      } else {
+        setIsLiked(false);
+      }
+    };
+    checkLikeStatus();
+  }, [user, video.id]);
   const [startY, setStartY] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuth();
 
   // Comments state and logic moved inside component
   type CommentRow = {
