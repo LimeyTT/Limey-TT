@@ -14,6 +14,7 @@ const Feed = () => {
   const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<any>(null);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const navigate = useNavigate();
   const { signOut } = useAuth();
   
@@ -126,7 +127,10 @@ const Feed = () => {
               <Card 
                 key={video.id} 
                 className="video-card relative group cursor-pointer"
-                onClick={() => setSelectedVideo(video)}
+                onClick={() => {
+                  setSelectedVideo(video);
+                  setCurrentVideoIndex(videos.findIndex(v => v.id === video.id));
+                }}
               >
                 <div className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden">
                   <img 
@@ -169,8 +173,24 @@ const Feed = () => {
       {/* Video Player Modal */}
       {selectedVideo && (
         <VideoPlayer 
-          video={selectedVideo} 
-          onClose={() => setSelectedVideo(null)} 
+          video={selectedVideo}
+          videos={videos}
+          currentIndex={currentVideoIndex}
+          onClose={() => setSelectedVideo(null)}
+          onNext={() => {
+            const nextIndex = currentVideoIndex + 1;
+            if (nextIndex < videos.length) {
+              setCurrentVideoIndex(nextIndex);
+              setSelectedVideo(videos[nextIndex]);
+            }
+          }}
+          onPrevious={() => {
+            const prevIndex = currentVideoIndex - 1;
+            if (prevIndex >= 0) {
+              setCurrentVideoIndex(prevIndex);
+              setSelectedVideo(videos[prevIndex]);
+            }
+          }}
         />
       )}
 

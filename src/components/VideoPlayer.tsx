@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Play, Pause, Volume2, VolumeX, Heart, MessageCircle, Share } from "lucide-react";
+import { X, Volume2, VolumeX, Heart, MessageCircle, Share, Play } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
@@ -27,15 +25,29 @@ interface Video {
 
 interface VideoPlayerProps {
   video: Video;
+  videos: Video[];
+  currentIndex: number;
   onClose: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
 }
 
-const VideoPlayer = ({ video, onClose }: VideoPlayerProps) => {
-  const [isPlaying, setIsPlaying] = useState(false);
+const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious }: VideoPlayerProps) => {
+  const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [startY, setStartY] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+
+  useEffect(() => {
+    // Auto-play when video changes
+    if (videoRef.current) {
+      videoRef.current.play();
+      setIsPlaying(true);
+    }
+  }, [video.id]);
 
   useEffect(() => {
     // Check if user has liked this video
@@ -121,9 +133,38 @@ const VideoPlayer = ({ video, onClose }: VideoPlayerProps) => {
     }
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const endY = e.changedTouches[0].clientY;
+    const diffY = startY - endY;
+    
+    // Swipe threshold
+    if (Math.abs(diffY) > 50) {
+      if (diffY > 0 && currentIndex < videos.length - 1) {
+        // Swipe up - next video
+        onNext();
+      } else if (diffY < 0 && currentIndex > 0) {
+        // Swipe down - previous video
+        onPrevious();
+      }
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
-      <div className="relative w-full h-full max-w-md mx-auto">
+    <div 
+      ref={containerRef}
+      className="fixed inset-0 bg-black z-50"
+      style={{ 
+        top: '64px', // Account for top header
+        bottom: '80px' // Account for bottom navigation
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className="relative w-full h-full">
         {/* Video */}
         <video
           ref={videoRef}
@@ -131,97 +172,136 @@ const VideoPlayer = ({ video, onClose }: VideoPlayerProps) => {
           poster={video.thumbnail_url}
           className="w-full h-full object-cover"
           loop
+          autoPlay
+          playsInline
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           onClick={togglePlay}
         />
 
-        {/* Overlay Controls */}
-        <div className="absolute inset-0 flex flex-col justify-between p-4">
-          {/* Top Bar */}
-          <div className="flex justify-between items-center">
+        {/* Top Controls */}
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-white p-2 bg-black/30 hover:bg-black/50 rounded-full"
+          >
+            <X size={20} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleMute}
+            className="text-white p-2 bg-black/30 hover:bg-black/50 rounded-full"
+          >
+            {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+          </Button>
+        </div>
+
+        {/* Center Play Button - Only show when paused */}
+        {!isPlaying && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
             <Button
+              onClick={togglePlay}
               variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="text-white bg-black/50 hover:bg-black/70"
+              className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 text-white"
             >
-              ✕
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleMute}
-              className="text-white bg-black/50 hover:bg-black/70"
-            >
-              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              <Play size={32} className="ml-1" />
             </Button>
           </div>
+        )}
 
-          {/* Center Play Button */}
-          {!isPlaying && (
-            <div className="flex items-center justify-center">
-              <Button
-                onClick={togglePlay}
-                className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 border-2 border-white"
-              >
-                <Play size={24} className="text-white ml-1" />
-              </Button>
-            </div>
-          )}
-
-          {/* Bottom Info & Actions */}
+        {/* Bottom Content - TikTok Style */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
           <div className="flex justify-between items-end">
-            <div className="flex-1 mr-4">
-              <div className="flex items-center mb-2">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center mr-2">
-                  <span className="text-white text-sm font-bold">
-                    {video.profiles?.username?.charAt(0)?.toUpperCase() || 'U'}
-                  </span>
+            {/* Left Side - User Info and Caption */}
+            <div className="flex-1 mr-4 space-y-3">
+              {/* User Profile - Raised like TikTok */}
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-red-500 p-0.5">
+                  <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
+                    {video.profiles?.avatar_url ? (
+                      <img 
+                        src={video.profiles.avatar_url} 
+                        alt="Profile" 
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white font-bold text-lg">
+                        {video.profiles?.username?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <span className="text-white font-semibold">
-                  @{video.profiles?.username || 'unknown'}
+                <div>
+                  <p className="text-white font-semibold text-lg">
+                    @{video.profiles?.username || 'unknown'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Video Caption */}
+              <div className="space-y-2">
+                <h3 className="text-white font-semibold text-base leading-tight">
+                  {video.title}
+                </h3>
+                {video.description && (
+                  <p className="text-white/90 text-sm leading-relaxed">
+                    {video.description}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Right Side Actions - TikTok Style Vertical */}
+            <div className="flex flex-col items-center space-y-6">
+              {/* Like Button */}
+              <div className="flex flex-col items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLike}
+                  className="w-12 h-12 rounded-full p-0 text-white hover:bg-white/10"
+                >
+                  <Heart 
+                    size={28} 
+                    className={`${isLiked ? "fill-red-500 text-red-500" : "text-white"} transition-colors`} 
+                  />
+                </Button>
+                <span className="text-white text-xs font-semibold mt-1">
+                  {video.like_count || 0}
                 </span>
               </div>
-              <h3 className="text-white font-semibold mb-1 line-clamp-2">
-                {video.title}
-              </h3>
-              {video.description && (
-                <p className="text-white/80 text-sm line-clamp-2">
-                  {video.description}
-                </p>
-              )}
-            </div>
 
-            <div className="flex flex-col space-y-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLike}
-                className="flex flex-col items-center text-white bg-black/50 hover:bg-black/70 p-2"
-              >
-                <Heart size={24} className={isLiked ? "fill-red-500 text-red-500" : ""} />
-                <span className="text-xs">{video.like_count || 0}</span>
-              </Button>
+              {/* Comment Button */}
+              <div className="flex flex-col items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-12 h-12 rounded-full p-0 text-white hover:bg-white/10"
+                >
+                  <MessageCircle size={28} />
+                </Button>
+                <span className="text-white text-xs font-semibold mt-1">
+                  {video.comment_count || 0}
+                </span>
+              </div>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex flex-col items-center text-white bg-black/50 hover:bg-black/70 p-2"
-              >
-                <MessageCircle size={24} />
-                <span className="text-xs">{video.comment_count || 0}</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleShare}
-                className="flex flex-col items-center text-white bg-black/50 hover:bg-black/70 p-2"
-              >
-                <Share size={24} />
-                <span className="text-xs">Share</span>
-              </Button>
+              {/* Share Button */}
+              <div className="flex flex-col items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleShare}
+                  className="w-12 h-12 rounded-full p-0 text-white hover:bg-white/10"
+                >
+                  <Share size={28} />
+                </Button>
+                <span className="text-white text-xs font-semibold mt-1">
+                  Share
+                </span>
+              </div>
             </div>
           </div>
         </div>
