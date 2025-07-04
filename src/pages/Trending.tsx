@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import BottomNavigation from "@/components/BottomNavigation";
-// import VideoPlayer from "@/components/VideoPlayer";
-import dynamic from "next/dynamic";
-const VideoPlayer = dynamic(() => import("@/components/VideoPlayer"), { ssr: false });
+import VideoPlayer from "@/components/VideoPlayer";
 
 
 
@@ -122,32 +120,21 @@ function TrendingVideoList({ videos }: { videos: any[] }) {
 }
 
 function TrendingVideoPopup({ videos, currentIndex, onClose }: { videos: any[]; currentIndex: number; onClose: () => void }) {
-  const [index, setIndex] = useState(currentIndex);
-  const video = videos[index];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90">
       <div className="absolute inset-0 z-40 bg-black/90" onClick={onClose} />
       <div className="relative z-50 w-full h-full flex items-center justify-center">
-        <button
-          className="absolute top-4 right-4 z-50 text-white bg-black/60 rounded-full p-2 hover:bg-black/80 transition"
-          onClick={onClose}
-          aria-label="Close video popup"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
         <div className="w-full h-full max-w-md mx-auto flex items-center justify-center">
           <VideoPlayer
-            video={video}
+            video={videos[currentIndex]}
             videos={videos}
-            currentIndex={index}
+            currentIndex={currentIndex}
             onClose={onClose}
             onNext={() => {
-              if (index < videos.length - 1) setIndex(index + 1);
+              if (currentIndex < videos.length - 1) onClose(); // or implement next
             }}
             onPrevious={() => {
-              if (index > 0) setIndex(index - 1);
+              if (currentIndex > 0) onClose(); // or implement previous
             }}
           />
         </div>
