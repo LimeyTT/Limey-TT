@@ -122,7 +122,7 @@ const Signup = () => {
             </button>
           </div>
 
-          <Button type="submit" variant="neon" className="w-full" disabled={loading}>
+          <Button type="submit" variant="neon" className="w-full mt-6" disabled={loading}>
             {loading ? "Creating Account..." : "Create Account"}
           </Button>
         </form>

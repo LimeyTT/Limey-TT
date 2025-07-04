@@ -81,7 +81,7 @@ const Login = () => {
             </button>
           </div>
 
-          <Button type="submit" variant="neon" className="w-full" disabled={loading}>
+          <Button type="submit" variant="neon" className="w-full mt-6" disabled={loading}>
             {loading ? "Signing In..." : "Sign In"}
           </Button>
         </form>
