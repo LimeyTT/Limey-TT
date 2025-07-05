@@ -48,7 +48,7 @@ const Feed = () => {
     // Hashtags: #tag, tags: comma/space separated, category, title, description
     let query = supabase
       .from('videos')
-      .select(`*, profiles:profiles!videos_user_id_fkey(username, avatar_url)`)
+      .select(`*`)
       .order('created_at', { ascending: false });
 
     // If search term starts with #, search description/tags for hashtag
@@ -71,16 +71,9 @@ const Feed = () => {
   const fetchVideos = async () => {
     try {
       setLoading(true);
-      
       let query = supabase
         .from('videos')
-        .select(`
-          *,
-          profiles!videos_user_id_fkey (
-            username,
-            avatar_url
-          )
-        `)
+        .select(`*`)
         .order('created_at', { ascending: false });
 
       // Filter by category if not "All"
@@ -199,11 +192,17 @@ const Feed = () => {
                   }}
                 >
                   <div className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden">
-                    <img 
-                      src={video.thumbnail_url || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop"}
-                      alt={video.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    {video.thumbnail_url ? (
+                      <img
+                        src={`https://<hhcirfvubsugcuypjyxpe/v1/object/public/limeytt-uploads/${video.thumbnail_url}`}
+                        alt={video.title}
+                        className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300 bg-black/10 flex items-center justify-center">
+                        {/* No cover image, just a background */}
+                      </div>
+                    )}
                     <div className="absolute bottom-2 right-2">
                       <Badge variant="secondary" className="bg-black/70 text-white">
                         {formatDuration(video.duration)}
@@ -220,7 +219,7 @@ const Feed = () => {
                       {video.title}
                     </h3>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span className="creator-badge">@{video.profiles?.username || 'unknown'}</span>
+                      <span className="creator-badge">@{video.username || 'unknown'}</span>
                       <span>{formatViews(video.view_count)} views</span>
                     </div>
                   </div>
@@ -244,41 +243,53 @@ const Feed = () => {
                 }}
               >
                 <div className="relative aspect-[9/16] bg-muted rounded-lg overflow-hidden">
-                  <img 
-                    src={video.thumbnail_url || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop"}
-                    alt={video.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  
+                  {video.thumbnail_url ? (
+                    <img
+                      src={`https://<hhcirfvubsugcuypjyxpe/v1/object/public/limeytt-uploads/${video.thumbnail_url}`}
+                      alt={video.title}
+                      className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300 bg-black/10 flex items-center justify-center">
+                      {/* No cover image, just a background */}
+                    </div>
+                  )}
                   {/* Video Duration */}
                   <div className="absolute bottom-2 right-2">
                     <Badge variant="secondary" className="bg-black/70 text-white">
                       {formatDuration(video.duration)}
                     </Badge>
                   </div>
-                  
                   {/* Play button overlay */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                    <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    <button
+                      className="w-12 h-12 bg-primary rounded-full flex items-center justify-center focus:outline-none"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setSelectedVideo(video);
+                        setCurrentVideoIndex(videos.findIndex(v => v.id === video.id));
+                      }}
+                      aria-label="Play video"
+                    >
                       <span className="text-primary-foreground text-xl">▶</span>
-                    </div>
+                    </button>
                   </div>
                 </div>
-                
                 {/* Video Info */}
                 <div className="p-3">
                   <h3 className="font-semibold text-foreground text-sm line-clamp-2 mb-1">
                     {video.title}
                   </h3>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="creator-badge">@{video.profiles?.username || 'unknown'}</span>
-                    <span>{formatViews(video.view_count)} views</span>
-                  </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="creator-badge">@{video.username || 'unknown'}</span>
+                      <span>{formatViews(video.view_count)} views</span>
+                    </div>
                 </div>
               </Card>
             ))}
           </div>
-        )}
+        )))}
+
       </div>
 
       {/* Video Player Modal */}

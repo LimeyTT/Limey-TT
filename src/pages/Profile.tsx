@@ -6,21 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNavigation from "@/components/BottomNavigation";
-import { Settings as SettingsIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { MoreVertical } from "lucide-react";
 
 const Profile = () => {
-  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedVideoIndex, setSelectedVideoIndex] = useState<number | null>(null);
-  const [isVideoPopupOpen, setIsVideoPopupOpen] = useState(false);
-  const [startY, setStartY] = useState(0);
-
-  // User videos state
   const [userVideos, setUserVideos] = useState<any[]>([]);
-
 
   useEffect(() => {
     if (user) {
@@ -28,35 +20,6 @@ const Profile = () => {
       fetchUserVideos();
     }
   }, [user]);
-
-  // Fetch user videos from Supabase Storage (limey-media/<user.id>)
-  const fetchUserVideos = async () => {
-    if (!user?.id) return;
-    try {
-      const { data, error } = await supabase.storage.from('limey-media').list(user.id, { limit: 100 });
-      if (error) {
-        console.error('Error fetching user videos:', error);
-        setUserVideos([]);
-        return;
-      }
-      const videos = data
-        .filter((file) => file.name.match(/\.(mp4|mov|webm|ogg)$/i))
-        .map((file) => {
-          const { publicUrl } = supabase.storage.from('limey-media').getPublicUrl(`${user.id}/${file.name}`).data;
-          return {
-            id: file.id || file.name,
-            title: file.name,
-            video_url: publicUrl,
-            thumbnail_url: '',
-            created_at: file.created_at || '',
-          };
-        });
-      setUserVideos(videos);
-    } catch (err) {
-      console.error('User videos fetch error:', err);
-      setUserVideos([]);
-    }
-  };
 
   const fetchProfile = async () => {
     try {
@@ -78,39 +41,37 @@ const Profile = () => {
     }
   };
 
-  // Handle video selection
-  const handleVideoClick = (index: number) => {
-    setSelectedVideoIndex(index);
-    setIsVideoPopupOpen(true);
-    document.body.style.overflow = 'hidden';
-  };
-
-  // Handle popup close
-  const handleCloseVideo = () => {
-    setIsVideoPopupOpen(false);
-    setSelectedVideoIndex(null);
-    document.body.style.overflow = 'auto';
-  };
-
-  // Handle next video
-  const handleNextVideo = () => {
-    if (selectedVideoIndex === null || !userVideos) return;
-    const nextIndex = selectedVideoIndex + 1;
-    if (nextIndex < userVideos.length) {
-      setSelectedVideoIndex(nextIndex);
+  // Fetch user videos from the new videos table only (all assets in limeytt-uploads)
+  const fetchUserVideos = async () => {
+    if (!user?.id) return;
+    try {
+      const { data: dbVideos, error: dbError } = await supabase
+        .from('videos')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      setUserVideos(dbVideos || []);
+    } catch (err) {
+      console.error('Error fetching user videos:', err);
+      setUserVideos([]);
     }
   };
 
-  // Handle previous video
-  const handlePreviousVideo = () => {
-    if (selectedVideoIndex === null || !userVideos) return;
-    const prevIndex = selectedVideoIndex - 1;
-    if (prevIndex >= 0) {
-      setSelectedVideoIndex(prevIndex);
-    } else {
-      // Refresh the page when swiping down on first video
-      window.location.reload();
+  const handleDeleteVideo = async (videoId: string, videoUrl: string, thumbnailUrl?: string) => {
+    if (!window.confirm("Are you sure you want to delete this video? This cannot be undone.")) return;
+    // Remove from DB
+    const { error: dbError } = await supabase.from('videos').delete().eq('id', videoId);
+    // Remove from storage (limeytt-uploads)
+    if (videoUrl) {
+      const path = videoUrl.split('/limeytt-uploads/')[1];
+      if (path) await supabase.storage.from('limeytt-uploads').remove([path]);
     }
+    if (thumbnailUrl) {
+      const thumbPath = thumbnailUrl.split('/limeytt-uploads/')[1];
+      if (thumbPath) await supabase.storage.from('limeytt-uploads').remove([thumbPath]);
+    }
+    // Refresh list
+    fetchUserVideos();
   };
 
   if (loading) {
@@ -128,13 +89,7 @@ const Profile = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">Profile</h1>
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => navigate('/settings')}
-            >
-              <SettingsIcon className="w-5 h-5" />
-            </Button>
+            <Button variant="ghost" size="sm">Settings</Button>
             <Button variant="outline" size="sm" onClick={signOut}>Logout</Button>
           </div>
         </div>
@@ -144,10 +99,27 @@ const Profile = () => {
       <div className="p-6">
         <div className="flex flex-col items-center text-center">
           {/* Avatar */}
-          <div className="w-24 h-24 bg-gradient-to-br from-primary to-primary/50 rounded-full flex items-center justify-center mb-4">
-            <span className="text-3xl font-bold text-white">
-              {profile?.username?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
-            </span>
+          <div className="relative mb-4">
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="Profile"
+                className="w-24 h-24 rounded-full object-cover border-2 border-primary"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center text-3xl font-bold text-primary">
+                {profile?.username?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute bottom-2 right-2 bg-white/80 hover:bg-white"
+              onClick={() => window.location.href = '/edit-profile'}
+              aria-label="Edit profile photo"
+            >
+              <span role="img" aria-label="camera">📷</span>
+            </Button>
           </div>
           
           {/* Username */}
@@ -200,8 +172,26 @@ const Profile = () => {
 
           {/* Action Buttons */}
           <div className="flex space-x-3">
-            <Button variant="outline">Edit Profile</Button>
-            <Button variant="neon">Share Profile</Button>
+            <Button variant="outline" onClick={() => window.location.href = '/edit-profile'}>
+              Edit Profile
+            </Button>
+            <Button 
+              variant="neon"
+              onClick={() => {
+                const url = `${window.location.origin}/profile/${profile?.username || user?.id}`;
+                if (navigator.share) {
+                  navigator.share({
+                    title: `Check out @${profile?.username || 'user'} on Limey!`,
+                    url
+                  });
+                } else {
+                  navigator.clipboard.writeText(url);
+                  alert('Profile link copied to clipboard!');
+                }
+              }}
+            >
+              Share Profile
+            </Button>
           </div>
         </div>
       </div>
@@ -214,23 +204,43 @@ const Profile = () => {
             <TabsTrigger value="likes">Liked</TabsTrigger>
             <TabsTrigger value="saved">Saved</TabsTrigger>
           </TabsList>
-          
           <TabsContent value="videos" className="mt-4">
             <div className="grid grid-cols-3 gap-2">
-              {userVideos.map((video, index) => (
+              {userVideos.map((video) => (
                 <Card
                   key={video.id}
                   className="relative aspect-[9/16] cursor-pointer group"
-                  onClick={() => handleVideoClick(index)}
+                  onClick={() => {
+                    // TODO: Open video player modal here
+                  }}
                 >
-                  <img
-                    src={video.thumbnail_url || video.thumbnail || "/placeholder.svg"}
-                    alt={video.title}
-                    className="w-full h-full object-cover rounded-lg group-hover:opacity-80 transition-opacity"
-                  />
+                  {video.thumbnail_url ? (
+                    <img
+                      src={`https://<YOUR_SUPABASE_PROJECT_ID>.supabase.co/storage/v1/object/public/limeytt-uploads/${video.thumbnail_url}`}
+                      alt={video.title}
+                      className="w-full h-full object-cover rounded-lg group-hover:opacity-80 transition-opacity"
+                    />
+                  ) : (
+                    <div className="w-full h-full object-cover rounded-lg group-hover:opacity-80 transition-opacity bg-black/10 flex items-center justify-center">
+                      {/* No cover image, just a background */}
+                    </div>
+                  )}
+                  {/* 3-dots menu */}
+                  <div className="absolute top-2 right-2 z-10">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleDeleteVideo(video.id, video.video_url, video.thumbnail_url);
+                      }}
+                    >
+                      <MoreVertical size={18} />
+                    </Button>
+                  </div>
                   <div className="absolute bottom-2 right-2">
                     <Badge variant="secondary" className="bg-black/70 text-white text-xs">
-                      {video.duration || "--:--"}
+                      {video.duration ? `${Math.floor(video.duration / 60)}:${(video.duration % 60).toString().padStart(2, '0')}` : '0:00'}
                     </Badge>
                   </div>
                   <div className="absolute bottom-2 left-2">
@@ -238,24 +248,28 @@ const Profile = () => {
                       👁️ {video.view_count || 0}
                     </div>
                   </div>
+                  <div className="absolute bottom-10 left-2 right-2">
+                    <div className="text-white text-xs font-semibold truncate">
+                      {video.title}
+                    </div>
+                  </div>
                 </Card>
               ))}
             </div>
-            
             {userVideos.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">No videos yet</p>
-                <Button variant="neon">Create Your First Video</Button>
+                <Button variant="neon" onClick={() => window.location.href = '/upload'}>
+                  Create Your First Video
+                </Button>
               </div>
             )}
           </TabsContent>
-          
           <TabsContent value="likes" className="mt-4">
             <div className="text-center py-12">
               <p className="text-muted-foreground">Your liked videos will appear here</p>
             </div>
           </TabsContent>
-          
           <TabsContent value="saved" className="mt-4">
             <div className="text-center py-12">
               <p className="text-muted-foreground">Your saved videos will appear here</p>
@@ -263,66 +277,6 @@ const Profile = () => {
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Video Popup */}
-      {isVideoPopupOpen && selectedVideoIndex !== null && (
-        <div 
-          className="fixed inset-0 z-50 bg-black touch-none"
-          onTouchStart={(e) => {
-            const touch = e.touches[0];
-            setStartY(touch.clientY);
-          }}
-          onTouchMove={(e) => {
-            const touch = e.touches[0];
-            const deltaY = touch.clientY - startY;
-            
-            if (Math.abs(deltaY) > 100) {
-              if (deltaY > 0 && selectedVideoIndex === 0) {
-                handleCloseVideo();
-                window.location.reload();
-              } else if (deltaY > 0) {
-                handlePreviousVideo();
-              } else {
-                handleNextVideo();
-              }
-              setStartY(touch.clientY);
-            }
-          }}
-        >
-          <div className="relative h-full w-full">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 z-50 text-white"
-              onClick={handleCloseVideo}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </Button>
-            
-            <video
-              key={userVideos[selectedVideoIndex]?.id}
-              src={userVideos[selectedVideoIndex]?.video_url}
-              poster={userVideos[selectedVideoIndex]?.thumbnail_url || userVideos[selectedVideoIndex]?.thumbnail || "/placeholder.svg"}
-              className="h-full w-full object-cover"
-              autoPlay
-              playsInline
-              loop
-              controls
-            />
-            
-            <div className="absolute bottom-20 left-4 right-4 text-white">
-              <h3 className="text-lg font-bold mb-2">{userVideos[selectedVideoIndex].title}</h3>
-              <div className="flex items-center space-x-2">
-                <span>{userVideos[selectedVideoIndex].views} views</span>
-                <span>•</span>
-                <span>{userVideos[selectedVideoIndex].likes} likes</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Bottom Navigation */}
       <BottomNavigation />

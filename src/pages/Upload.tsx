@@ -15,6 +15,8 @@ const Upload = () => {
   const [description, setDescription] = useState("");
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [category, setCategory] = useState<string>('All');
+  // Thumbnail selection removed, handled by backend or default
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -35,6 +37,23 @@ const Upload = () => {
     }
   };
 
+  // Utility to extract video duration only
+  const extractVideoDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.src = URL.createObjectURL(file);
+      video.muted = true;
+      video.playsInline = true;
+      video.onloadedmetadata = () => {
+        const duration = Math.round(video.duration);
+        resolve(duration);
+      };
+      video.onerror = (e) => reject(new Error('Failed to load video for metadata extraction'));
+    });
+  };
+
+  // After successful upload to storage, insert metadata into the videos table
   const handleUpload = async () => {
     if (!file || !user || !title.trim()) {
       toast({
@@ -48,25 +67,40 @@ const Upload = () => {
     setUploading(true);
 
     try {
-      // Upload file to Supabase Storage
+      // Extract video duration
+      let duration = 0;
+      if (file.type.startsWith('video/')) {
+        duration = await extractVideoDuration(file);
+      }
+
+      // Upload video file to new bucket
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      
       const { data, error } = await supabase.storage
-        .from('limey-media')
+        .from('limeytt-uploads')
         .upload(fileName, file);
-
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('limey-media')
+        .from('limeytt-uploads')
         .getPublicUrl(fileName);
 
-      console.log("File uploaded successfully:", publicUrl);
-      
+      // Insert metadata into videos table (thumbnail handled by backend or default)
+      const { error: dbError } = await supabase.from('videos').insert({
+        title,
+        description,
+        video_url: publicUrl,
+        thumbnail_url: '', // Let backend or default handle
+        duration,
+        user_id: user.id,
+        username: user.user_metadata?.username || '',
+        avatar_url: user.user_metadata?.avatar_url || '',
+        category,
+        // Add more fields as needed (e.g., tags)
+      });
+      if (dbError) throw dbError;
+
       toast({
         title: "Upload Successful! 🎉",
         description: "Your content has been uploaded to Limey"
@@ -77,7 +111,6 @@ const Upload = () => {
       setTitle("");
       setDescription("");
       setPreview(null);
-
     } catch (error: any) {
       console.error('Upload error:', error);
       toast({
@@ -95,8 +128,7 @@ const Upload = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border p-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-primary">📱 Upload</h1>
-          <Button variant="ghost" size="sm">Drafts</Button>
+          <h1 className="text-2xl font-bold text-primary">Upload</h1>
         </div>
       </div>
 
@@ -154,6 +186,7 @@ const Upload = () => {
         {file && (
           <Card className="mt-6 p-6">
             <div className="space-y-4">
+
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">
                   Title *
@@ -167,6 +200,27 @@ const Upload = () => {
                 <p className="text-xs text-muted-foreground mt-1">
                   {title.length}/100 characters
                 </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Category
+                </label>
+                <select
+                  className="w-full border rounded px-3 py-2 bg-background text-foreground"
+                  value={category || 'All'}
+                  onChange={e => setCategory(e.target.value)}
+                  required
+                >
+                  <option value="All">All</option>
+                  <option value="Soca">Soca</option>
+                  <option value="Dancehall">Dancehall</option>
+                  <option value="Carnival">Carnival</option>
+                  <option value="Comedy">Comedy</option>
+                  <option value="Dance">Dance</option>
+                  <option value="Music">Music</option>
+                  <option value="Local News">Local News</option>
+                </select>
               </div>
 
               <div>
@@ -186,7 +240,7 @@ const Upload = () => {
               </div>
 
               {/* Content Type Badges */}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {file.type.startsWith('video/') && (
                   <Badge variant="secondary">🎬 Video</Badge>
                 )}
@@ -198,6 +252,8 @@ const Upload = () => {
                 )}
                 <Badge variant="outline">Trinidad & Tobago</Badge>
               </div>
+
+              {/* Thumbnail selection removed */}
 
               {/* Upload Button */}
               <div className="flex space-x-3 pt-4">

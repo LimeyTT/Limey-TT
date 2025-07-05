@@ -1,4 +1,4 @@
-  // Helper type guard for profiles
+// Helper type guard for profiles
   function hasProfile(obj: any): obj is { username: string } {
     return obj && typeof obj === "object" && typeof obj.username === "string";
   }
@@ -234,6 +234,14 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
       setIsMuted(!isMuted);
     }
   };
+
+  // Fallbacks for missing metadata
+  const displayTitle = video.title || (video.video_url ? video.video_url.split('/').pop() : 'Untitled');
+  const displayDescription = video.description || 'No description available.';
+  const displayDuration = video.duration ? `${Math.floor(video.duration / 60)}:${(video.duration % 60).toString().padStart(2, '0')}` : '--:--';
+  const displayUsername = video.profiles?.username || 'unknown';
+  const displayAvatar = video.profiles?.avatar_url || '';
+
   return (
     <div 
       ref={containerRef}
@@ -244,20 +252,31 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      onClick={e => {
+        // Only trigger play/pause if not clicking on a control (close or mute)
+        const controlSelectors = ['button[data-control]'];
+        let el: HTMLElement | null = e.target as HTMLElement;
+        while (el && el !== e.currentTarget) {
+          if (controlSelectors.some(sel => el.matches(sel))) {
+            return;
+          }
+          el = el.parentElement;
+        }
+        togglePlay();
+      }}
     >
       <div className="relative w-full h-full">
         {/* Video */}
         <video
           ref={videoRef}
           src={video.video_url}
-          poster={video.thumbnail_url}
+          poster={video.thumbnail_url || undefined}
           className="w-full h-full object-cover"
           loop
           autoPlay
           playsInline
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
-          onClick={togglePlay}
         />
 
         {/* Top Controls */}
@@ -267,6 +286,7 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
             size="sm"
             onClick={onClose}
             className="text-white p-2 bg-black/30 hover:bg-black/50 rounded-full"
+            data-control
           >
             <X size={20} />
           </Button>
@@ -275,6 +295,7 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
             size="sm"
             onClick={toggleMute}
             className="text-white p-2 bg-black/30 hover:bg-black/50 rounded-full"
+            data-control
           >
             {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
           </Button>
@@ -282,11 +303,12 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
 
         {/* Center Play Button - Only show when paused */}
         {!isPlaying && (
-          <div className="absolute inset-0 flex items-center justify-center z-10">
+          <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
             <Button
-              onClick={togglePlay}
               variant="ghost"
-              className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 text-white"
+              className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 text-white pointer-events-auto"
+              style={{ pointerEvents: 'none' }}
+              tabIndex={-1}
             >
               <Play size={32} className="ml-1" />
             </Button>
@@ -302,22 +324,22 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-red-500 p-0.5">
                   <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
-                    {video.profiles?.avatar_url ? (
+                    {displayAvatar ? (
                       <img 
-                        src={video.profiles.avatar_url} 
+                        src={displayAvatar} 
                         alt="Profile" 
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
                       <span className="text-white font-bold text-lg">
-                        {video.profiles?.username?.charAt(0)?.toUpperCase() || 'U'}
+                        {displayUsername.charAt(0).toUpperCase()}
                       </span>
                     )}
                   </div>
                 </div>
                 <div>
                   <p className="text-white font-semibold text-lg">
-                    @{video.profiles?.username || 'unknown'}
+                    @{displayUsername}
                   </p>
                 </div>
               </div>
@@ -325,11 +347,11 @@ const VideoPlayer = ({ video, videos, currentIndex, onClose, onNext, onPrevious 
               {/* Video Caption */}
               <div className="space-y-2">
                 <h3 className="text-white font-semibold text-base leading-tight">
-                  {video.title}
+                  {displayTitle}
                 </h3>
-                {video.description && (
+                {displayDescription && (
                   <p className="text-white/90 text-sm leading-relaxed">
-                    {video.description}
+                    {displayDescription}
                   </p>
                 )}
               </div>
