@@ -287,7 +287,7 @@ const Feed = () => {
       {/* Video Feed */}
       <div 
         ref={containerRef}
-        className="pt-20 pb-24 h-screen overflow-y-auto snap-y snap-mandatory"
+        className="pt-20 pb-32 h-screen overflow-y-auto snap-y snap-mandatory"
         style={{ scrollSnapType: 'y mandatory' }}
       >
         {loading ? (
@@ -325,7 +325,7 @@ const Feed = () => {
                 <div
                   key={video.id}
                   data-video-id={video.id}
-                  className="relative h-screen snap-start snap-always flex items-center justify-center"
+                  className="relative h-[calc(100vh-5rem)] snap-start snap-always flex items-center justify-center"
                 >
                   {/* Video */}
                   <video
@@ -340,7 +340,7 @@ const Feed = () => {
                   />
 
                   {/* Video Info Overlay - TikTok Style */}
-                  <div className="absolute bottom-20 left-0 right-0 p-6 text-white">
+                  <div className="absolute bottom-32 left-0 right-0 p-6 text-white">
                     <div className="flex justify-between items-end">
                       {/* Left Side - User Info and Caption */}
                       <div className="flex-1 mr-4 space-y-3">
@@ -439,7 +439,7 @@ const Feed = () => {
                   )}
 
                   {/* Mute Button */}
-                  <div className="absolute top-4 right-4">
+                  <div className="absolute top-20 right-4">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -475,7 +475,7 @@ const Feed = () => {
               <div
                 key={video.id}
                 data-video-id={video.id}
-                className="relative h-screen snap-start snap-always flex items-center justify-center"
+                className="relative h-[calc(100vh-5rem)] snap-start snap-always flex items-center justify-center"
               >
                 {/* Video */}
                 <video
@@ -490,7 +490,7 @@ const Feed = () => {
                 />
 
                 {/* Video Info Overlay - TikTok Style */}
-                <div className="absolute bottom-20 left-0 right-0 p-6 text-white">
+                <div className="absolute bottom-32 left-0 right-0 p-6 text-white">
                   <div className="flex justify-between items-end">
                     {/* Left Side - User Info and Caption */}
                     <div className="flex-1 mr-4 space-y-3">
@@ -589,7 +589,7 @@ const Feed = () => {
                 )}
 
                 {/* Mute Button */}
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-20 right-4">
                   <Button
                     variant="ghost"
                     size="sm"
