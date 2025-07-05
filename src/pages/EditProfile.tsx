@@ -1,4 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { Popover } from "@/components/ui/popover";
+// import { Dialog } from "@/components/ui/dialog";
 import Cropper from "react-easy-crop";
 import { Dialog } from "@/components/ui/dialog";
 import { getCroppedImg } from "@/lib/utils";
@@ -24,12 +26,31 @@ const EditProfile = () => {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const [showCropModal, setShowCropModal] = useState(false);
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch profile info on mount
-  // (You may want to useEffect here to fetch and set state)
+
+  // Fetch profile info on mount and set all fields
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      if (!error && data) {
+        setUsername(data.username || "");
+        setDisplayName(data.display_name || "");
+        setBio(data.bio || "");
+        setAvatarUrl(data.avatar_url || null);
+      }
+    };
+    fetchProfile();
+  }, [user]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,6 +61,8 @@ const EditProfile = () => {
       setShowCropModal(true);
     };
     reader.readAsDataURL(file);
+    // Reset input value so user can re-select the same file if needed
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const onCropComplete = (_: any, croppedAreaPixels: any) => {
@@ -52,10 +75,13 @@ const EditProfile = () => {
     try {
       const croppedBlob = await getCroppedImg(selectedImage, croppedAreaPixels);
       const fileName = `avatars/${user.id}/profile.jpg`;
+      // Remove old avatar first to avoid caching issues
+      await supabase.storage.from('limeytt-uploads').remove([fileName]);
       const { error } = await supabase.storage.from('limeytt-uploads').upload(fileName, croppedBlob, { upsert: true });
       if (!error) {
+        // Add cache-busting param
         const { data } = supabase.storage.from('limeytt-uploads').getPublicUrl(fileName);
-        setAvatarUrl(data.publicUrl);
+        setAvatarUrl(data.publicUrl + '?t=' + Date.now());
         toast({ title: "Profile photo updated!" });
       } else {
         toast({ title: "Failed to upload photo", variant: "destructive" });
@@ -76,6 +102,7 @@ const EditProfile = () => {
 
   const handleRemoveAvatar = async () => {
     if (!user) return;
+    if (!window.confirm("Are you sure you want to remove your profile photo?")) return;
     const fileName = `avatars/${user.id}/profile.jpg`;
     await supabase.storage.from('limeytt-uploads').remove([fileName]);
     setAvatarUrl(null);
@@ -107,45 +134,85 @@ const EditProfile = () => {
       <Card className="p-6 flex flex-col items-center">
         {/* Avatar */}
         <div className="relative mb-6">
-          {avatarUrl ? (
+          <Popover open={showAvatarMenu} onOpenChange={setShowAvatarMenu}>
+            <div
+              className="w-28 h-28 rounded-full overflow-hidden border-2 border-primary flex items-center justify-center group"
+              tabIndex={0}
+              role="button"
+              aria-label="Profile photo menu"
+              onClick={e => {
+                // Only open menu if camera button or image is clicked
+                if (e.target === e.currentTarget) setShowViewModal(true);
+              }}
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Profile"
+                  className="w-28 h-28 object-cover"
+                />
+              ) : (
+                <div className="w-28 h-28 bg-primary/20 flex items-center justify-center text-4xl font-bold text-primary">
+                  {user?.email?.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute bottom-1 right-1 w-8 h-8 p-0 flex items-center justify-center bg-white/80 hover:bg-white border border-primary shadow"
+                onClick={e => {
+                  e.stopPropagation();
+                  setShowAvatarMenu(true);
+                }}
+                aria-label="Edit profile photo"
+                style={{ borderRadius: '50%' }}
+              >
+                <span role="img" aria-label="camera" style={{ fontSize: 18 }}>📷</span>
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+            </div>
+            {showAvatarMenu && (
+              <div
+                className="fixed inset-0 z-40 flex items-center justify-center bg-black/30"
+                onClick={() => setShowAvatarMenu(false)}
+              >
+                <div
+                  className="bg-white border rounded shadow-lg flex flex-col min-w-[140px] z-50"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <button className="px-4 py-2 hover:bg-gray-100 text-left font-bold text-black" onClick={() => { setShowViewModal(true); setShowAvatarMenu(false); }}>View</button>
+                  <button className="px-4 py-2 hover:bg-gray-100 text-left font-bold text-black" onClick={() => { fileInputRef.current?.click(); setShowAvatarMenu(false); }}>Change</button>
+                  <button className="px-4 py-2 hover:bg-red-100 text-left text-red-600" onClick={() => { setShowAvatarMenu(false); handleRemoveAvatar(); }}>Remove</button>
+                </div>
+              </div>
+            )}
+          </Popover>
+        </div>
+
+        {/* View Modal */}
+        {showViewModal && avatarUrl ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowViewModal(false)}>
+            <button
+              className="absolute top-4 right-4 text-white text-2xl bg-black/60 rounded-full px-3 py-1 z-10"
+              onClick={e => { e.stopPropagation(); setShowViewModal(false); }}
+              aria-label="Close"
+            >
+              &times;
+            </button>
             <img
               src={avatarUrl}
               alt="Profile"
-              className="w-28 h-28 rounded-full object-cover border-2 border-primary"
+              className="max-w-xs max-h-[80vh] rounded-lg border-2 border-primary bg-white"
+              onClick={e => e.stopPropagation()}
             />
-          ) : (
-            <div className="w-28 h-28 rounded-full bg-primary/20 flex items-center justify-center text-4xl font-bold text-primary">
-              {user?.email?.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute bottom-1 right-1 w-8 h-8 p-0 flex items-center justify-center bg-white/80 hover:bg-white border border-primary shadow"
-            onClick={() => fileInputRef.current?.click()}
-            aria-label="Edit profile photo"
-            style={{ borderRadius: '50%' }}
-          >
-            <span role="img" aria-label="camera" style={{ fontSize: 18 }}>📷</span>
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleAvatarChange}
-          />
-          {avatarUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute top-2 right-2"
-              onClick={handleRemoveAvatar}
-            >
-              Remove
-            </Button>
-          )}
-        </div>
+          </div>
+        ) : null}
 
         {/* Crop Modal */}
         <Dialog open={showCropModal} onOpenChange={setShowCropModal}>

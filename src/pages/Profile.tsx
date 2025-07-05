@@ -74,6 +74,10 @@ const Profile = () => {
     fetchUserVideos();
   };
 
+
+  // State for avatar view modal (must be before any return)
+  const [showViewModal, setShowViewModal] = useState(false);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -111,15 +115,21 @@ const Profile = () => {
                 {profile?.username?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase()}
               </div>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute bottom-2 right-2 bg-white/80 hover:bg-white"
-              onClick={() => window.location.href = '/edit-profile'}
-              aria-label="Edit profile photo"
-            >
-              <span role="img" aria-label="camera">📷</span>
-            </Button>
+            {/* Avatar is now clickable for full screen view, no camera button */}
+            <div
+              className="absolute inset-0 cursor-pointer"
+              onClick={() => setShowViewModal(true)}
+              aria-label="View profile photo"
+              tabIndex={0}
+              role="button"
+            ></div>
+            {/* View Modal for Avatar */}
+            {showViewModal && profile?.avatar_url && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setShowViewModal(false)}>
+                <button className="absolute top-4 right-4 text-white text-2xl bg-black/60 rounded-full px-3 py-1" onClick={e => { e.stopPropagation(); setShowViewModal(false); }}>&times;</button>
+                <img src={profile.avatar_url} alt="Profile" className="max-w-xs max-h-[80vh] rounded-lg border-2 border-primary bg-white" onClick={e => e.stopPropagation()} />
+              </div>
+            )}
           </div>
           
           {/* Username */}
