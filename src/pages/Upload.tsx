@@ -53,6 +53,45 @@ const Upload = () => {
     });
   };
 
+  // Generate thumbnail from video file
+  const generateThumbnail = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.src = URL.createObjectURL(file);
+      video.muted = true;
+      video.playsInline = true;
+      
+      video.onloadedmetadata = () => {
+        // Seek to 1 second or 25% of the video, whichever is shorter
+        const seekTime = Math.min(1, video.duration * 0.25);
+        video.currentTime = seekTime;
+      };
+      
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 320; // Thumbnail width
+        canvas.height = 568; // Thumbnail height (9:16 aspect ratio)
+        
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to generate thumbnail'));
+            }
+          }, 'image/jpeg', 0.8);
+        } else {
+          reject(new Error('Failed to get canvas context'));
+        }
+      };
+      
+      video.onerror = (e) => reject(new Error('Failed to load video for thumbnail generation'));
+    });
+  };
+
   // After successful upload to storage, insert metadata into the videos table
   const handleUpload = async () => {
     if (!file || !user || !title.trim()) {
@@ -67,10 +106,30 @@ const Upload = () => {
     setUploading(true);
 
     try {
-      // Extract video duration
+      // Extract video duration and generate thumbnail
       let duration = 0;
+      let thumbnailUrl = '';
+      
       if (file.type.startsWith('video/')) {
         duration = await extractVideoDuration(file);
+        
+        // Generate thumbnail
+        try {
+          const thumbnailBlob = await generateThumbnail(file);
+          const thumbnailFile = new File([thumbnailBlob], 'thumbnail.jpg', { type: 'image/jpeg' });
+          const thumbnailFileName = `${user.id}/thumbnails/${Date.now()}.jpg`;
+          
+          const { error: thumbnailError } = await supabase.storage
+            .from('limeytt-uploads')
+            .upload(thumbnailFileName, thumbnailFile);
+          
+          if (!thumbnailError) {
+            thumbnailUrl = thumbnailFileName;
+          }
+        } catch (thumbnailError) {
+          console.warn('Failed to generate thumbnail:', thumbnailError);
+          // Continue without thumbnail
+        }
       }
 
       // Upload video file to new bucket
@@ -86,20 +145,27 @@ const Upload = () => {
         .from('limeytt-uploads')
         .getPublicUrl(fileName);
 
-      // Insert metadata into videos table (thumbnail handled by backend or default)
-      const { error: dbError } = await supabase.from('videos').insert({
+      // Insert metadata into videos table
+      const { data: insertData, error: dbError } = await supabase.from('videos').insert({
         title,
         description,
         video_url: publicUrl,
-        thumbnail_url: '', // Let backend or default handle
+        thumbnail_url: thumbnailUrl,
         duration,
         user_id: user.id,
-        username: user.user_metadata?.username || '',
-        avatar_url: user.user_metadata?.avatar_url || '',
         category,
         // Add more fields as needed (e.g., tags)
-      });
-      if (dbError) throw dbError;
+      }).select();
+      
+      if (dbError) {
+        console.error('Database error details:', {
+          code: dbError.code,
+          message: dbError.message,
+          details: dbError.details,
+          hint: dbError.hint
+        });
+        throw dbError;
+      }
 
       toast({
         title: "Upload Successful! 🎉",
@@ -113,15 +179,43 @@ const Upload = () => {
       setPreview(null);
     } catch (error: any) {
       console.error('Upload error:', error);
+      
+      let errorMessage = "Something went wrong";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.code === '23503') {
+        errorMessage = "User profile not found. Please try logging out and back in.";
+      } else if (error.code === '23505') {
+        errorMessage = "A video with this title already exists. Please choose a different title.";
+      } else if (error.code === '42501') {
+        errorMessage = "Permission denied. Please check your account status.";
+      }
+      
       toast({
         title: "Upload Failed",
-        description: error.message || "Something went wrong",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
       setUploading(false);
     }
   };
+
+  // Redirect if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-primary mb-4">Please Sign In</h1>
+          <p className="text-muted-foreground mb-4">You need to be signed in to upload content.</p>
+          <Button onClick={() => window.location.href = '/'} variant="neon">
+            Go to Sign In
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -269,14 +363,14 @@ const Upload = () => {
                 >
                   Cancel
                 </Button>
-                <Button 
-                  variant="neon" 
-                  onClick={handleUpload}
-                  disabled={uploading || !title.trim()}
-                  className="flex-1"
-                >
-                  {uploading ? "Uploading..." : "Share to Limey 🚀"}
-                </Button>
+                              <Button 
+                variant="neon" 
+                onClick={handleUpload}
+                disabled={uploading || !title.trim()}
+                className="flex-1"
+              >
+                {uploading ? "Uploading..." : "Share to Limey 🚀"}
+              </Button>
               </div>
             </div>
           </Card>

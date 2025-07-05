@@ -3,7 +3,7 @@ DROP TABLE IF EXISTS public.videos CASCADE;
 
 CREATE TABLE public.videos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
   video_url TEXT NOT NULL,
